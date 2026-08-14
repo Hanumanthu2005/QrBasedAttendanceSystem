@@ -1,6 +1,7 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.security.JwtService;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginResponse;
 import com.Hanu.QrBasedAttendanceSystem.entity.User;
@@ -17,21 +18,31 @@ public class AuthServiceImp implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid Email or Password"));
 
-        boolean verification = passwordEncoder.matches(request.getPassword(), user.getPassword());
-
-        if(!verification) {
-            throw new BadCredentialsException("Invalid Email or Password");
+        if(!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+            throw new BadCredentialsException(
+                    "Invalid Email or Password"
+            );
         }
 
+        String token = jwtService.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+
         return LoginResponse.builder()
+                .token(token)
                 .email(user.getEmail())
                 .name(user.getName())
-                .role(String.valueOf(user.getRole()))
+                .role(user.getRole().name())
                 .userId(user.getId())
                 .build();
     }
