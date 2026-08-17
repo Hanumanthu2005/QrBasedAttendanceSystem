@@ -1,6 +1,8 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.entity.Role;
+import com.Hanu.QrBasedAttendanceSystem.entity.Status;
 import com.Hanu.QrBasedAttendanceSystem.security.JwtService;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginResponse;
@@ -23,6 +25,10 @@ public class AuthServiceImp implements AuthService {
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid Email or Password"));
+
+        if(user.getFaculty() != null && user.getFaculty().getStatus().equals(Status.INACTIVE)) {
+            throw new BadCredentialsException("your profile was inactive please connect with the admin");
+        }
 
         if(!passwordEncoder.matches(
                 request.getPassword(),

@@ -1,10 +1,7 @@
 package com.Hanu.QrBasedAttendanceSystem.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
@@ -13,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class Faculty {
 
     @Id
@@ -28,4 +26,7 @@ public class Faculty {
 
     @OneToMany(mappedBy = "faculty")
     private List<Student> students;
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
 }

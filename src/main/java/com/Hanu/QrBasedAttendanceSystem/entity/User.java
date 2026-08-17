@@ -1,10 +1,8 @@
 package com.Hanu.QrBasedAttendanceSystem.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,6 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class User {
 
     @Id
@@ -30,10 +29,10 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Student student;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Faculty faculty;
 
     private LocalDateTime createdAt;
