@@ -1,5 +1,6 @@
 package com.Hanu.QrBasedAttendanceSystem.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,5 +42,35 @@ public class JwtService {
                 .expiration(expiryDate)
                 .signWith(secretKey)
                 .compact();
+    }
+
+    public Claims extractClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public String getEmail(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public Long getUserId(String token) {
+        return extractClaims(token)
+                .get("userId", Long.class);
+    }
+
+    public String getRole(String token) {
+        return extractClaims(token).get("role", String.class);
+    }
+
+    public boolean isValid(String token) {
+        try {
+            extractClaims(token);
+            return true;
+        } catch(Exception e) {
+            return false;
+        }
     }
 }
