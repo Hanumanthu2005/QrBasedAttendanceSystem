@@ -25,4 +25,7 @@ public class Student {
     @ManyToOne
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
 }

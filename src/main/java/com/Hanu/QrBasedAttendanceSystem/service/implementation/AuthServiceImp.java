@@ -26,7 +26,7 @@ public class AuthServiceImp implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid Email or Password"));
 
-        if(user.getFaculty() != null && user.getFaculty().getStatus().equals(Status.INACTIVE)) {
+        if((user.getFaculty() != null && user.getFaculty().getStatus().equals(Status.INACTIVE)) || (user.getStudent() != null && user.getStudent().getStatus().equals(Status.INACTIVE))) {
             throw new BadCredentialsException("your profile was inactive please connect with the admin");
         }
 
