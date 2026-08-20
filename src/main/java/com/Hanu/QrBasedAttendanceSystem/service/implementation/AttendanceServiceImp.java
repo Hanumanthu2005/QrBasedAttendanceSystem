@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Service
@@ -29,13 +31,8 @@ public class AttendanceServiceImp implements AttendanceService {
 
     @Transactional
     public AttendanceResponse markAttendance(AttendanceRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if(authentication == null) {
-            throw new BadCredentialsException("User not authenticated");
-        }
-
-        User user = (User) authentication.getPrincipal();
+        User user = getUser();
 
         if(user == null) {
             throw new ResourceNotFoundException("User not found");
@@ -90,4 +87,82 @@ public class AttendanceServiceImp implements AttendanceService {
                 .status(attendance.getStatus())
                 .build();
     }
+
+    @Override
+    public List<AttendanceResponse> getStudentAttendance() {
+
+        User user = getUser();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        Student student = user.getStudent();
+
+        if(student == null) {
+            throw new BadCredentialsException("Your role must student");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByStudent(student);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getFacultyAttendance() {
+
+        User user = getUser();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        Faculty faculty = user.getFaculty();
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    // ======================= Helper function ======================
+
+    public static User getUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null) {
+            throw new BadCredentialsException("User not authenticated");
+        }
+
+        return (User) authentication.getPrincipal();
+    }
+
+    public static AttendanceResponse mapToAttendanceResponse(Attendance attendance) {
+        return AttendanceResponse.builder()
+                .id(attendance.getId())
+                .studentName(attendance.getStudent().getUser().getName())
+                .studentRoll(attendance.getStudent().getRoll())
+                .facultyId(attendance.getFaculty().getFacultyId())
+                .attendanceTime(attendance.getTime())
+                .attendanceDate(attendance.getDate())
+                .status(attendance.getStatus())
+                .build();
+    }
+
+
 }

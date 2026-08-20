@@ -6,21 +6,30 @@ import com.Hanu.QrBasedAttendanceSystem.service.AttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/faculty")
+@RequestMapping("/api")
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
-    @PostMapping("/attendance")
+    @PostMapping("/faculty/attendance")
     public ResponseEntity<AttendanceResponse> markAttendance(
             @Valid @RequestBody AttendanceRequest request) {
         return ResponseEntity.ok().body(attendanceService.markAttendance(request));
+    }
+
+    @GetMapping("/student/attendance")
+    public ResponseEntity<List<AttendanceResponse>> getStudentAttendance() {
+        return ResponseEntity.ok().body(attendanceService.getStudentAttendance());
+    }
+
+    @GetMapping("/faculty/attendance")
+    public ResponseEntity<List<AttendanceResponse>> getFacultyAttendance() {
+        return ResponseEntity.ok().body(attendanceService.getFacultyAttendance());
     }
 }
