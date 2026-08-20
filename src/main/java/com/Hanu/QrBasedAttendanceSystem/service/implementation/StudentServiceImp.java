@@ -1,21 +1,23 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
-import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceAlreadyExistException;
-import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
-import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.Exception.*;
 import com.Hanu.QrBasedAttendanceSystem.dto.student.StudentRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.student.StudentResponse;
 import com.Hanu.QrBasedAttendanceSystem.dto.student.UpdateStudentRequest;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
 import com.Hanu.QrBasedAttendanceSystem.repo.FacultyRepository;
+import com.Hanu.QrBasedAttendanceSystem.repo.StudentQrRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.StudentRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.UserRepository;
+import com.Hanu.QrBasedAttendanceSystem.security.QrTokenGenerator;
 import com.Hanu.QrBasedAttendanceSystem.service.StudentService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,9 @@ public class StudentServiceImp implements StudentService {
     private final FacultyRepository facultyRepository;
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StudentQrRepository studentQrRepository;
+    private final QrImageGenerator qrImageGenerator;
+    private final QrFileStorageService qrFileStorageService;
 
 
     @Override
@@ -72,6 +77,38 @@ public class StudentServiceImp implements StudentService {
                 .build();
 
         student = studentRepository.save(student);
+
+        String qrToken;
+
+        do {
+            qrToken = QrTokenGenerator.generateToken();
+        } while(studentQrRepository.existsByQrToken(qrToken));
+
+        BufferedImage image;
+        try {
+            image = qrImageGenerator.generate(qrToken);
+        } catch (Exception e) {
+            throw new QrGenerationException("Error occured while generating qr image " + e);
+        }
+
+        String fileName;
+        try {
+            fileName = qrFileStorageService.store(image, "student-" + student.getId() + ".png");
+        } catch (IOException e) {
+            throw new QrFileStorageException("Error occured while storing qr image " + e);
+        }
+
+        StudentQr studentQr = StudentQr.builder()
+                .student(student)
+                .qrToken(qrToken)
+                .createdAt(LocalDateTime.now())
+                .status(Status.ACTIVE)
+                .imagePath(fileName)
+                .build();
+
+        student.setStudentQr(studentQr);
+
+        studentQrRepository.save(studentQr);
 
         return StudentResponse.builder()
                 .id(student.getId())

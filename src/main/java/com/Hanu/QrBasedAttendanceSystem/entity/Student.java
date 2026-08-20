@@ -28,4 +28,7 @@ public class Student {
 
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private StudentQr studentQr;
 }
