@@ -3,6 +3,8 @@ package com.Hanu.QrBasedAttendanceSystem.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -31,4 +33,7 @@ public class Student {
 
     @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private StudentQr studentQr;
+
+    @OneToMany(mappedBy = "student")
+    private List<Attendance> attendance;
 }

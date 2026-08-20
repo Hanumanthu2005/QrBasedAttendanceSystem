@@ -28,7 +28,7 @@ public class StudentQrServiceImp implements StudentQrService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if(authentication == null) {
-            throw new RuntimeException("no valid user");
+            throw new BadCredentialsException("no valid user");
         }
 
         User user = (User) authentication.getPrincipal();

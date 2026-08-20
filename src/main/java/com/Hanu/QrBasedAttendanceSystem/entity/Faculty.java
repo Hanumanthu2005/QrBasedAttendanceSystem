@@ -29,4 +29,7 @@ public class Faculty {
 
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    @OneToMany(mappedBy = "faculty")
+    private List<Attendance> attendance;
 }
