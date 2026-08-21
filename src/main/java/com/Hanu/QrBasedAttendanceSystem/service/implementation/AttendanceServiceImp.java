@@ -1,5 +1,6 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
+import com.Hanu.QrBasedAttendanceSystem.Exception.BadInputException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.RelationMismatchException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
@@ -130,6 +131,65 @@ public class AttendanceServiceImp implements AttendanceService {
         }
 
         List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getStudentAttendanceInBetween(LocalDate startDate, LocalDate endDate) {
+
+        if(startDate == null || endDate == null) {
+            throw new BadInputException("Both dates need to be provided");
+        }
+
+        if(startDate.isAfter(endDate)) {
+            throw new BadInputException("Start date must be before end date or same date");
+        }
+
+        User user = getUser();
+
+        Student student = user.getStudent();
+
+        if(student == null) {
+            throw new BadCredentialsException("Role must be student");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByStudentAndDateBetween(student, startDate, endDate);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getFacultyAttendanceInBetween(LocalDate startDate, LocalDate endDate) {
+        if(startDate == null || endDate == null) {
+            throw new BadInputException("Both dates need to be provided");
+        }
+
+        if(startDate.isAfter(endDate)) {
+            throw new BadInputException("Start date must be before end date or same date");
+        }
+
+        User user = getUser();
+
+        Faculty faculty = user.getFaculty();
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByFacultyAndDateBetween(faculty, startDate, endDate);
 
         List<AttendanceResponse> responses = new ArrayList<>();
 
