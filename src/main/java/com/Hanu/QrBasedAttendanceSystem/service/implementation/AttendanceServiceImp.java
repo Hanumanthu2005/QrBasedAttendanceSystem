@@ -99,121 +99,74 @@ public class AttendanceServiceImp implements AttendanceService {
     public List<AttendanceResponse> getAllAttendance() {
         User user = getUser();
 
-        if(!user.getRole().equals(Role.ADMIN)) {
-            throw new BadCredentialsException("Role must be admin");
-        }
+        validateAdmin(user);
 
         List<Attendance> attendances = attendanceRepository.findAll();
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     @Override
     public List<AttendanceResponse> getAllAttendanceWithDateRange(LocalDate startDate, LocalDate endDate) {
 
-        if(startDate == null || endDate == null) {
-            throw new BadInputException("Both dates need to be provided");
-        }
-
-        if(startDate.isAfter(endDate)) {
-            throw new BadInputException("Start date must be before end date or same date");
-        }
+        validateDates(startDate, endDate);
 
         User user = getUser();
 
-        if(!user.getRole().equals(Role.ADMIN)) {
-            throw new BadCredentialsException("Role must be admin");
-        }
+        validateAdmin(user);
 
         List<Attendance> attendances = attendanceRepository.findByDateBetween(startDate, endDate);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     @Override
     public List<AttendanceResponse> getFacultyAttendance(Long id) {
         User user = getUser();
 
-        if(!user.getRole().equals(Role.ADMIN)) {
-            throw new BadCredentialsException("Role must be admin");
-        }
+        validateAdmin(user);
 
         Faculty faculty = facultyRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Faculty not found")
                 );
 
-
         List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     @Override
     public List<AttendanceResponse> getStudentAttendance(Long id) {
         User user = getUser();
 
-        if(!user.getRole().equals(Role.ADMIN)) {
-            throw new BadCredentialsException("Role must be admin");
-        }
+        validateAdmin(user);
 
         Student student = studentRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Student not found")
                 );
 
-
         List<Attendance> attendances = attendanceRepository.findByStudent(student);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     public List<AttendanceResponse> getFacultyAttendanceInBetween(Long id, LocalDate startDate, LocalDate endDate) {
         User user = getUser();
 
-        if(!user.getRole().equals(Role.ADMIN)) {
-            throw new BadCredentialsException("Role must be admin");
-        }
+        validateDates(startDate, endDate);
+
+        validateAdmin(user);
 
         Faculty faculty = facultyRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Faculty not found")
                 );
 
-
         List<Attendance> attendances = attendanceRepository.findByFacultyAndDateBetween(faculty, startDate, endDate);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     // ====================== STUDENT ==========================
@@ -247,13 +200,7 @@ public class AttendanceServiceImp implements AttendanceService {
     @Override
     public List<AttendanceResponse> getStudentAttendanceInBetween(LocalDate startDate, LocalDate endDate) {
 
-        if(startDate == null || endDate == null) {
-            throw new BadInputException("Both dates need to be provided");
-        }
-
-        if(startDate.isAfter(endDate)) {
-            throw new BadInputException("Start date must be before end date or same date");
-        }
+        validateDates(startDate, endDate);
 
         User user = getUser();
 
@@ -265,13 +212,7 @@ public class AttendanceServiceImp implements AttendanceService {
 
         List<Attendance> attendances = attendanceRepository.findByStudentAndDateBetween(student, startDate, endDate);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
 
@@ -306,13 +247,7 @@ public class AttendanceServiceImp implements AttendanceService {
 
     @Override
     public List<AttendanceResponse> getFacultyAttendanceInBetween(LocalDate startDate, LocalDate endDate) {
-        if(startDate == null || endDate == null) {
-            throw new BadInputException("Both dates need to be provided");
-        }
-
-        if(startDate.isAfter(endDate)) {
-            throw new BadInputException("Start date must be before end date or same date");
-        }
+        validateDates(startDate, endDate);
 
         User user = getUser();
 
@@ -324,18 +259,12 @@ public class AttendanceServiceImp implements AttendanceService {
 
         List<Attendance> attendances = attendanceRepository.findByFacultyAndDateBetween(faculty, startDate, endDate);
 
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
+        return mapToAttendanceResponses(attendances);
     }
 
     // ======================= Helper function ======================
 
-    public static User getUser() {
+    private static User getUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if(authentication == null) {
@@ -345,7 +274,7 @@ public class AttendanceServiceImp implements AttendanceService {
         return (User) authentication.getPrincipal();
     }
 
-    public static AttendanceResponse mapToAttendanceResponse(Attendance attendance) {
+    private static AttendanceResponse mapToAttendanceResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .id(attendance.getId())
                 .studentName(attendance.getStudent().getUser().getName())
@@ -357,5 +286,30 @@ public class AttendanceServiceImp implements AttendanceService {
                 .build();
     }
 
+    private List<AttendanceResponse> mapToAttendanceResponses(List<Attendance> attendances) {
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    private void validateAdmin(User user) {
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+    }
+
+    private void validateDates(LocalDate startDate, LocalDate endDate) {
+        if(startDate == null || endDate == null) {
+            throw new BadInputException("Both dates need to be provided");
+        }
+
+        if(startDate.isAfter(endDate)) {
+            throw new BadInputException("Start date must be before end date or same date");
+        }
+    }
 
 }

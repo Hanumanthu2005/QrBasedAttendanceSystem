@@ -1,6 +1,5 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
-
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceAlreadyExistException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
 import com.Hanu.QrBasedAttendanceSystem.dto.faculty.FacultyRequest;
@@ -37,55 +36,26 @@ public class FacultyServiceImp implements FacultyService {
             throw new ResourceAlreadyExistException("User already existed by  email" + request.getEmail());
         }
 
-        User user = User.builder()
-             .name(request.getName())
-             .email(request.getEmail())
-             .password(passwordEncoder.encode(request.getPassword()))
-             .role(Role.FACULTY)
-             .createdAt(LocalDateTime.now())
-             .build();
-
-        user = userRepository.save(user);
-
         if(facultyRepository.existsByFacultyId(request.getFacultyId())) {
             throw new ResourceAlreadyExistException("Faculty exist already with faculty id" + request.getFacultyId());
         }
 
-        Faculty faculty = Faculty.builder()
-                .facultyId(request.getFacultyId())
-                .user(user)
-                .status(Status.ACTIVE)
-                .build();
+        User user = getUser(request);
+
+        user = userRepository.save(user);
+
+        Faculty faculty = mapToFaculty(request, user);
 
         faculty = facultyRepository.save(faculty);
 
-        return FacultyResponse.builder()
-                .id(faculty.getId())
-                .facultyId(faculty.getFacultyId())
-                .name(faculty.getUser().getName())
-                .email(faculty.getUser().getEmail())
-                .status(faculty.getStatus().name())
-                .build();
+        return mapToFacultyResponse(faculty);
     }
 
     public List<FacultyResponse> getFaculty() {
+
         List<Faculty> faculties = facultyRepository.findAll();
 
-        List<FacultyResponse> res = new ArrayList<>();
-
-        for(Faculty faculty : faculties) {
-            FacultyResponse temp = FacultyResponse.builder()
-                    .id(faculty.getId())
-                    .facultyId(faculty.getFacultyId())
-                    .name(faculty.getUser().getName())
-                    .email(faculty.getUser().getEmail())
-                    .status(faculty.getStatus().name())
-                    .build();
-
-            res.add(temp);
-        }
-
-        return res;
+        return mapToFacultyResponses(faculties);
     }
 
     public FacultyResponse getFacultyById(Long id) {
@@ -94,13 +64,7 @@ public class FacultyServiceImp implements FacultyService {
                         new ResourceNotFoundException("faculty not found with id" + id)
                 );
 
-        return FacultyResponse.builder()
-                .id(faculty.getId())
-                .name(faculty.getUser().getName())
-                .facultyId(faculty.getFacultyId())
-                .email(faculty.getUser().getEmail())
-                .status(faculty.getStatus().name())
-                .build();
+        return mapToFacultyResponse(faculty);
     }
 
     @Transactional
@@ -118,31 +82,25 @@ public class FacultyServiceImp implements FacultyService {
         if(existingUser != null && !existingUser.getId().equals(user.getId()))
             throw new ResourceAlreadyExistException("Email already belongs to the another user");
 
+        Faculty exists = facultyRepository.findByFacultyId(request.getFacultyId())
+                .orElse(null);
+
+        if(exists != null && !exists.getId().equals(faculty.getId()))
+            throw new ResourceAlreadyExistException("Faculty already exist with id " + request.getFacultyId());
+
+
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setUpdatedAt(LocalDateTime.now());
 
         user = userRepository.save(user);
 
-        Faculty exists = facultyRepository.findByFacultyId(request.getFacultyId())
-                        .orElse(null);
-
-        if(exists != null && !exists.getId().equals(faculty.getId()))
-            throw new ResourceAlreadyExistException("Faculty already exist with id " + request.getFacultyId());
-
-
         faculty.setFacultyId(request.getFacultyId());
         faculty.setUser(user);
 
         facultyRepository.save(faculty);
 
-        return FacultyResponse.builder()
-                .id(faculty.getId())
-                .name(user.getName())
-                .facultyId(faculty.getFacultyId())
-                .email(faculty.getUser().getEmail())
-                .status(faculty.getStatus().name())
-                .build();
+        return mapToFacultyResponse(faculty);
 
     }
 
@@ -156,13 +114,47 @@ public class FacultyServiceImp implements FacultyService {
 
         facultyRepository.save(faculty);
 
-        return FacultyResponse.builder()
+        return mapToFacultyResponse(faculty);
+    }
+
+    // ==================== HELPER METHODS ===================
+
+    private User getUser(FacultyRequest request) {
+        return User.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.FACULTY)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private Faculty mapToFaculty(FacultyRequest request, User user) {
+        return Faculty.builder()
+                .facultyId(request.getFacultyId())
+                .user(user)
+                .status(Status.ACTIVE)
+                .build();
+    }
+
+    private FacultyResponse mapToFacultyResponse(Faculty faculty) {
+        return  FacultyResponse.builder()
                 .id(faculty.getId())
-                .name(faculty.getUser().getName())
                 .facultyId(faculty.getFacultyId())
+                .name(faculty.getUser().getName())
                 .email(faculty.getUser().getEmail())
                 .status(faculty.getStatus().name())
                 .build();
+    }
+
+    private List<FacultyResponse> mapToFacultyResponses(List<Faculty> faculties) {
+        List<FacultyResponse> responses = new ArrayList<>();
+
+        for(Faculty faculty : faculties) {
+            responses.add(mapToFacultyResponse(faculty));
+        }
+
+        return responses;
     }
 
 }

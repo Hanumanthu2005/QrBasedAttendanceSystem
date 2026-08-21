@@ -7,7 +7,6 @@ import com.Hanu.QrBasedAttendanceSystem.entity.Status;
 import com.Hanu.QrBasedAttendanceSystem.entity.Student;
 import com.Hanu.QrBasedAttendanceSystem.entity.StudentQr;
 import com.Hanu.QrBasedAttendanceSystem.entity.User;
-import com.Hanu.QrBasedAttendanceSystem.repo.UserRepository;
 import com.Hanu.QrBasedAttendanceSystem.service.StudentQrService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -25,13 +24,7 @@ public class StudentQrServiceImp implements StudentQrService {
     @Override
     public byte[] getStudentQr() {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if(authentication == null) {
-            throw new BadCredentialsException("no valid user");
-        }
-
-        User user = (User) authentication.getPrincipal();
+        User user = getUser();
 
         if(user == null) {
             throw new ResourceNotFoundException("User not found");
@@ -61,7 +54,26 @@ public class StudentQrServiceImp implements StudentQrService {
             throw new ResourceNotFoundException("Qr image not found");
         }
 
-        byte qr[];
+        return getQr(imagePath);
+
+    }
+
+    // ===================== HELPER METHODS ========================
+
+    private User getUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null) {
+            throw new BadCredentialsException("no valid user");
+        }
+
+        return (User) authentication.getPrincipal();
+    }
+
+    private byte[] getQr(String imagePath) {
+
+        byte[] qr;
+
         try {
             qr = Files.readAllBytes(Path.of(imagePath));
         } catch (Exception e) {
