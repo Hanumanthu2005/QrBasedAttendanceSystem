@@ -19,11 +19,60 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
-    @PostMapping("/faculty/attendance")
-    public ResponseEntity<AttendanceResponse> markAttendance(
-            @Valid @RequestBody AttendanceRequest request) {
-        return ResponseEntity.ok().body(attendanceService.markAttendance(request));
+
+    // =================== ADMIN =====================
+    @GetMapping("/admin/attendance")
+    public ResponseEntity<List<AttendanceResponse>> getAttendance(
+            @RequestParam(required = false)
+            Long studentId,
+            @RequestParam(required = false)
+            Long facultyId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate) {
+        if(studentId == null && facultyId == null && startDate == null && endDate == null) {
+            return ResponseEntity.ok(
+                    attendanceService.getAllAttendance()
+            );
+        }
+
+        if(studentId != null) {
+            return ResponseEntity.ok(
+                    attendanceService.getStudentAttendance(
+                            studentId
+                    ));
+        }
+
+        if(startDate != null && endDate != null) {
+            if(facultyId == null) {
+                return ResponseEntity.ok(
+                        attendanceService.getAllAttendanceWithDateRange(
+                                startDate,
+                                endDate
+                        ));
+            }
+            return ResponseEntity.ok(
+                    attendanceService.getFacultyAttendanceInBetween(
+                            facultyId,
+                            startDate,
+                            endDate
+                    ));
+        } else {
+            if(facultyId != null) {
+                return ResponseEntity.ok(
+                        attendanceService.getFacultyAttendance(
+                                facultyId
+                        ));
+            }
+        }
+
+        return ResponseEntity.badRequest().body(List.of());
     }
+
+    // ==================== STUDENT ===================
 
     @GetMapping("/student/attendance")
     public ResponseEntity<List<AttendanceResponse>> getStudentAttendance(
@@ -32,8 +81,7 @@ public class AttendanceController {
             LocalDate startDate,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate endDate
-    ) {
+            LocalDate endDate) {
 
         if(startDate != null && endDate != null) {
             return ResponseEntity.ok(attendanceService.getStudentAttendanceInBetween(startDate, endDate));
@@ -45,6 +93,14 @@ public class AttendanceController {
         return ResponseEntity.ok().body(attendanceService.getStudentAttendance());
     }
 
+    // =================== FACULTY ======================
+
+    @PostMapping("/faculty/attendance")
+    public ResponseEntity<AttendanceResponse> markAttendance(
+            @Valid @RequestBody AttendanceRequest request) {
+        return ResponseEntity.ok().body(attendanceService.markAttendance(request));
+    }
+
     @GetMapping("/faculty/attendance")
     public ResponseEntity<List<AttendanceResponse>> getFacultyAttendance(
             @RequestParam(required = false)
@@ -52,8 +108,8 @@ public class AttendanceController {
             LocalDate startDate,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate endDate
-    ) {
+            LocalDate endDate) {
+
         if(startDate != null && endDate != null) {
             return ResponseEntity.ok(attendanceService.getFacultyAttendanceInBetween(startDate, endDate));
         }

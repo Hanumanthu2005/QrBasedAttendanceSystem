@@ -8,7 +8,9 @@ import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
 import com.Hanu.QrBasedAttendanceSystem.repo.AttendanceRepository;
+import com.Hanu.QrBasedAttendanceSystem.repo.FacultyRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.StudentQrRepository;
+import com.Hanu.QrBasedAttendanceSystem.repo.StudentRepository;
 import com.Hanu.QrBasedAttendanceSystem.service.AttendanceService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class AttendanceServiceImp implements AttendanceService {
 
     private final StudentQrRepository studentQrRepository;
     private final AttendanceRepository attendanceRepository;
+    private final FacultyRepository facultyRepository;
+    private final StudentRepository studentRepository;
 
     @Transactional
     public AttendanceResponse markAttendance(AttendanceRequest request) {
@@ -89,6 +93,131 @@ public class AttendanceServiceImp implements AttendanceService {
                 .build();
     }
 
+    //================= ADMIN ====================
+
+    @Override
+    public List<AttendanceResponse> getAllAttendance() {
+        User user = getUser();
+
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findAll();
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getAllAttendanceWithDateRange(LocalDate startDate, LocalDate endDate) {
+
+        if(startDate == null || endDate == null) {
+            throw new BadInputException("Both dates need to be provided");
+        }
+
+        if(startDate.isAfter(endDate)) {
+            throw new BadInputException("Start date must be before end date or same date");
+        }
+
+        User user = getUser();
+
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByDateBetween(startDate, endDate);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getFacultyAttendance(Long id) {
+        User user = getUser();
+
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        Faculty faculty = facultyRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Faculty not found")
+                );
+
+
+        List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    @Override
+    public List<AttendanceResponse> getStudentAttendance(Long id) {
+        User user = getUser();
+
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Student not found")
+                );
+
+
+        List<Attendance> attendances = attendanceRepository.findByStudent(student);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    public List<AttendanceResponse> getFacultyAttendanceInBetween(Long id, LocalDate startDate, LocalDate endDate) {
+        User user = getUser();
+
+        if(!user.getRole().equals(Role.ADMIN)) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        Faculty faculty = facultyRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Faculty not found")
+                );
+
+
+        List<Attendance> attendances = attendanceRepository.findByFacultyAndDateBetween(faculty, startDate, endDate);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
+    // ====================== STUDENT ==========================
+
     @Override
     public List<AttendanceResponse> getStudentAttendance() {
 
@@ -105,32 +234,6 @@ public class AttendanceServiceImp implements AttendanceService {
         }
 
         List<Attendance> attendances = attendanceRepository.findByStudent(student);
-
-        List<AttendanceResponse> responses = new ArrayList<>();
-
-        for(Attendance attendance : attendances) {
-            responses.add(mapToAttendanceResponse(attendance));
-        }
-
-        return responses;
-    }
-
-    @Override
-    public List<AttendanceResponse> getFacultyAttendance() {
-
-        User user = getUser();
-
-        if(user == null) {
-            throw new ResourceNotFoundException("User not found");
-        }
-
-        Faculty faculty = user.getFaculty();
-
-        if(faculty == null) {
-            throw new BadCredentialsException("Role must be faculty");
-        }
-
-        List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
 
         List<AttendanceResponse> responses = new ArrayList<>();
 
@@ -170,6 +273,36 @@ public class AttendanceServiceImp implements AttendanceService {
 
         return responses;
     }
+
+
+    // ================= FACULTY =================
+
+    @Override
+    public List<AttendanceResponse> getFacultyAttendance() {
+
+        User user = getUser();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        Faculty faculty = user.getFaculty();
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        List<Attendance> attendances = attendanceRepository.findByFaculty(faculty);
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for(Attendance attendance : attendances) {
+            responses.add(mapToAttendanceResponse(attendance));
+        }
+
+        return responses;
+    }
+
 
     @Override
     public List<AttendanceResponse> getFacultyAttendanceInBetween(LocalDate startDate, LocalDate endDate) {
