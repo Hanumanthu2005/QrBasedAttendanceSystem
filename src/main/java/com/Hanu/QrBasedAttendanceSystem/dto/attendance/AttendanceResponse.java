@@ -1,7 +1,7 @@
 package com.Hanu.QrBasedAttendanceSystem.dto.attendance;
 
 
-import com.Hanu.QrBasedAttendanceSystem.entity.AttendStatus;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

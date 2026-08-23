@@ -1,16 +1,14 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
-import com.Hanu.QrBasedAttendanceSystem.Exception.BadInputException;
-import com.Hanu.QrBasedAttendanceSystem.Exception.RelationMismatchException;
-import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
-import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.Exception.*;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
-import com.Hanu.QrBasedAttendanceSystem.repo.AttendanceRepository;
-import com.Hanu.QrBasedAttendanceSystem.repo.FacultyRepository;
-import com.Hanu.QrBasedAttendanceSystem.repo.StudentQrRepository;
-import com.Hanu.QrBasedAttendanceSystem.repo.StudentRepository;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.SessionStatus;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
+import com.Hanu.QrBasedAttendanceSystem.repo.*;
 import com.Hanu.QrBasedAttendanceSystem.service.AttendanceService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,65 +31,8 @@ public class AttendanceServiceImp implements AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final FacultyRepository facultyRepository;
     private final StudentRepository studentRepository;
+    private final AttendanceSessionRepository attendanceSessionRepository;
 
-    @Transactional
-    public AttendanceResponse markAttendance(AttendanceRequest request) {
-
-        User user = getUser();
-
-        if(user == null) {
-            throw new ResourceNotFoundException("User not found");
-        }
-
-        Faculty faculty = user.getFaculty();
-
-        if(faculty == null) {
-            throw new BadCredentialsException("Role must be faculty");
-        }
-
-        StudentQr studentQr = studentQrRepository.findByQrToken(request.getQrToken())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Student qr not found")
-                );
-
-        if(studentQr.getStatus().equals(Status.INACTIVE)) {
-            throw new ResourceNotAvailableException("Student qr is not available");
-        }
-
-        Student student = studentQr.getStudent();
-
-        if(student.getStatus().equals(Status.INACTIVE)) {
-            throw new ResourceNotAvailableException("Student not eligible");
-        }
-
-        if(!student.getFaculty().getFacultyId().equals(faculty.getFacultyId())) {
-            throw new RelationMismatchException("Student Faculty relation mismatch");
-        }
-
-        if(attendanceRepository.existsByStudentAndDate(student, LocalDate.now())) {
-            throw new RelationMismatchException("student already marked by faculty");
-        }
-
-        Attendance attendance = Attendance.builder()
-                .student(student)
-                .faculty(faculty)
-                .date(LocalDate.now())
-                .time(LocalDateTime.now())
-                .status(AttendStatus.PRESENT)
-                .build();
-
-        attendance = attendanceRepository.save(attendance);
-
-        return AttendanceResponse.builder()
-                .id(attendance.getId())
-                .studentName(student.getUser().getName())
-                .studentRoll(student.getRoll())
-                .facultyId(faculty.getFacultyId())
-                .attendanceDate(attendance.getDate())
-                .attendanceTime(attendance.getTime())
-                .status(attendance.getStatus())
-                .build();
-    }
 
     //================= ADMIN ====================
 
@@ -217,6 +158,76 @@ public class AttendanceServiceImp implements AttendanceService {
 
 
     // ================= FACULTY =================
+
+
+    @Transactional
+    public AttendanceResponse markAttendance(AttendanceRequest request) {
+
+        User user = getUser();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        Faculty faculty = user.getFaculty();
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        StudentQr studentQr = studentQrRepository.findByQrToken(request.getQrToken())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Student qr not found")
+                );
+
+        if(studentQr.getStatus().equals(Status.INACTIVE)) {
+            throw new ResourceNotAvailableException("Student qr is not available");
+        }
+
+        Student student = studentQr.getStudent();
+
+        if(student.getStatus().equals(Status.INACTIVE)) {
+            throw new ResourceNotAvailableException("Student not eligible");
+        }
+
+        if(!student.getFaculty().getFacultyId().equals(faculty.getFacultyId())) {
+            throw new RelationMismatchException("Student Faculty relation mismatch");
+        }
+
+        AttendanceSession session = attendanceSessionRepository.findByFacultyAndStatus(faculty, SessionStatus.ACTIVE)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Session Not found")
+                );
+
+        if(LocalDateTime.now().isAfter(session.getEndTime())) {
+            throw new ResourceNotAvailableException("Session Closed");
+        }
+
+        if(attendanceRepository.existsByStudentAndSession(student, session)) {
+            throw new ResourceAlreadyExistException("Student already attended the Session");
+        }
+
+        Attendance attendance = Attendance.builder()
+                .session(session)
+                .student(student)
+                .faculty(faculty)
+                .date(LocalDate.now())
+                .time(LocalDateTime.now())
+                .status(AttendStatus.PRESENT)
+                .build();
+
+        attendance = attendanceRepository.save(attendance);
+
+        return AttendanceResponse.builder()
+                .id(attendance.getId())
+                .studentName(student.getUser().getName())
+                .studentRoll(student.getRoll())
+                .facultyId(faculty.getFacultyId())
+                .attendanceDate(attendance.getDate())
+                .attendanceTime(attendance.getTime())
+                .status(attendance.getStatus())
+                .build();
+    }
 
     @Override
     public List<AttendanceResponse> getFacultyAttendance() {

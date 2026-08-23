@@ -5,6 +5,8 @@ import com.Hanu.QrBasedAttendanceSystem.dto.student.StudentRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.student.StudentResponse;
 import com.Hanu.QrBasedAttendanceSystem.dto.student.UpdateStudentRequest;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
 import com.Hanu.QrBasedAttendanceSystem.repo.FacultyRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.StudentQrRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.StudentRepository;

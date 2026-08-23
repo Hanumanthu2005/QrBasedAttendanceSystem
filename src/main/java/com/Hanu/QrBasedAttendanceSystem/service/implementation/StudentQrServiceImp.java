@@ -3,7 +3,7 @@ package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 import com.Hanu.QrBasedAttendanceSystem.Exception.QrReadException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
-import com.Hanu.QrBasedAttendanceSystem.entity.Status;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
 import com.Hanu.QrBasedAttendanceSystem.entity.Student;
 import com.Hanu.QrBasedAttendanceSystem.entity.StudentQr;
 import com.Hanu.QrBasedAttendanceSystem.entity.User;

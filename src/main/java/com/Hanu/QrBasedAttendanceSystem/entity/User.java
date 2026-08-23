@@ -1,5 +1,6 @@
 package com.Hanu.QrBasedAttendanceSystem.entity;
 
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
 import jakarta.persistence.*;
 import lombok.*;
 

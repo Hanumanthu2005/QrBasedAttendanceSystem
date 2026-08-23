@@ -1,4 +1,4 @@
-package com.Hanu.QrBasedAttendanceSystem.entity;
+package com.Hanu.QrBasedAttendanceSystem.entity.utils;
 
 public enum Role {
     ADMIN,

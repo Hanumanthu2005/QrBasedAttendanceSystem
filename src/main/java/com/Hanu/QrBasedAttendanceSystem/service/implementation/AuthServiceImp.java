@@ -1,7 +1,7 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
-import com.Hanu.QrBasedAttendanceSystem.entity.Status;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
 import com.Hanu.QrBasedAttendanceSystem.security.JwtService;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.auth.LoginResponse;

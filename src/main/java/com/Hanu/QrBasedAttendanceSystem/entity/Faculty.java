@@ -1,5 +1,6 @@
 package com.Hanu.QrBasedAttendanceSystem.entity;
 
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,4 +33,7 @@ public class Faculty {
 
     @OneToMany(mappedBy = "faculty")
     private List<Attendance> attendance;
+
+    @OneToMany(mappedBy = "faculty")
+    private List<AttendanceSession> sessions;
 }

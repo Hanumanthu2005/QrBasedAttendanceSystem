@@ -1,12 +1,13 @@
 package com.Hanu.QrBasedAttendanceSystem.entity;
 
-import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.SessionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -14,28 +15,25 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
-public class Attendance {
+public class AttendanceSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "student_id")
-    private Student student;
-
-    @ManyToOne
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
 
-    @Enumerated(EnumType.STRING)
-    private AttendStatus status;
-
     private LocalDate date;
 
-    private LocalDateTime time;
+    private LocalDateTime startTime;
 
-    @ManyToOne
-    @JoinColumn(name = "attendanceSession_id")
-    private AttendanceSession session;
+    private LocalDateTime endTime;
+
+    @Enumerated(EnumType.STRING)
+    private SessionStatus status;
+
+    @OneToMany(mappedBy = "session")
+    private List<Attendance> attendances;
 }
