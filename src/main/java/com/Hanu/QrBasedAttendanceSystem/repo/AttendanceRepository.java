@@ -4,6 +4,8 @@ import com.Hanu.QrBasedAttendanceSystem.entity.Attendance;
 import com.Hanu.QrBasedAttendanceSystem.entity.AttendanceSession;
 import com.Hanu.QrBasedAttendanceSystem.entity.Faculty;
 import com.Hanu.QrBasedAttendanceSystem.entity.Student;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -24,4 +26,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByFacultyAndDateBetween(Faculty faculty, LocalDate startDate, LocalDate endDate);
 
     List<Attendance> findByDateBetween(LocalDate startDate, LocalDate endDate);
+
+    long countByStudentAndStatus(Student student, AttendStatus status);
+
+    long countByStudentAndStatusAndDateBetween(Student student, AttendStatus status, LocalDate startDate, LocalDate endDate);
 }

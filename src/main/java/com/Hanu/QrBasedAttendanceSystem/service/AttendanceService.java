@@ -2,6 +2,7 @@ package com.Hanu.QrBasedAttendanceSystem.service;
 
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
@@ -26,5 +27,9 @@ public interface AttendanceService {
 
     List<AttendanceResponse> getFacultyAttendanceInBetween(LocalDate startDate, LocalDate endDate);
 
-    @Nullable List<AttendanceResponse> getAllAttendanceWithDateRange(LocalDate startDate, LocalDate endDate);
+    List<AttendanceResponse> getAllAttendanceWithDateRange(LocalDate startDate, LocalDate endDate);
+
+    StudentAttendanceSummary getStudentAttendanceSummary();
+
+    StudentAttendanceSummary getStudentAttendanceSummary(LocalDate startDate, LocalDate endDate);
 }

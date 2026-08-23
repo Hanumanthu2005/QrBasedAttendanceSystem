@@ -3,6 +3,7 @@ package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 import com.Hanu.QrBasedAttendanceSystem.Exception.*;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
@@ -156,6 +157,85 @@ public class AttendanceServiceImp implements AttendanceService {
         return mapToAttendanceResponses(attendances);
     }
 
+    @Override
+    public StudentAttendanceSummary getStudentAttendanceSummary() {
+
+        User user = getUser();
+
+        Student student = user.getStudent();
+
+        if(student == null) {
+            throw new BadCredentialsException("Role must be student");
+        }
+
+        Faculty faculty = student.getFaculty();
+
+        if(faculty == null) {
+            throw  new ResourceNotFoundException("Faculty Not found");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFaculty(faculty);
+
+        long presentSession = attendanceRepository.countByStudentAndStatus(student, AttendStatus.PRESENT);
+
+        long absentSession = totalSessions - presentSession;
+
+        long attendancePercentage = 0;
+
+        if(totalSessions != 0) {
+            attendancePercentage = (presentSession / totalSessions) * 100;
+        }
+
+        return StudentAttendanceSummary.builder()
+                .name(user.getName())
+                .roll(student.getRoll())
+                .totalSessions(totalSessions)
+                .presentSessions(presentSession)
+                .absentSessions(absentSession)
+                .attendancePercentage(attendancePercentage)
+                .build();
+    }
+
+    @Override
+    public StudentAttendanceSummary getStudentAttendanceSummary(LocalDate startDate, LocalDate endDate) {
+
+        validateDates(startDate, endDate);
+
+        User user = getUser();
+
+        Student student = user.getStudent();
+
+        if(student == null) {
+            throw new BadCredentialsException("Role must be student");
+        }
+
+        Faculty faculty = student.getFaculty();
+
+        if(faculty == null) {
+            throw  new ResourceNotFoundException("Faculty Not found");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFacultyAndDateBetween(faculty, startDate, endDate);
+
+        long presentSession = attendanceRepository.countByStudentAndStatusAndDateBetween(student, AttendStatus.PRESENT, startDate, endDate);
+
+        long absentSession = totalSessions - presentSession;
+
+        double attendancePercentage = 0;
+
+        if(totalSessions != 0) {
+            attendancePercentage = (presentSession / totalSessions) * 100;
+        }
+
+        return StudentAttendanceSummary.builder()
+                .name(user.getName())
+                .roll(student.getRoll())
+                .totalSessions(totalSessions)
+                .presentSessions(presentSession)
+                .absentSessions(absentSession)
+                .attendancePercentage(attendancePercentage)
+                .build();
+    }
 
     // ================= FACULTY =================
 
@@ -322,5 +402,6 @@ public class AttendanceServiceImp implements AttendanceService {
             throw new BadInputException("Start date must be before end date or same date");
         }
     }
+
 
 }

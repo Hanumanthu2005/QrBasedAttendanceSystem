@@ -2,6 +2,7 @@ package com.Hanu.QrBasedAttendanceSystem.controller;
 
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
 import com.Hanu.QrBasedAttendanceSystem.service.AttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +92,27 @@ public class AttendanceController {
             return ResponseEntity.badRequest().body(List.of());
         }
         return ResponseEntity.ok().body(attendanceService.getStudentAttendance());
+    }
+
+    @GetMapping("/student/attendance/summary")
+    public ResponseEntity<StudentAttendanceSummary> getStudentSummary(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate
+    ) {
+
+        if(startDate != null && endDate != null) {
+            return ResponseEntity.ok(attendanceService.getStudentAttendanceSummary(startDate, endDate));
+        }
+
+        if((startDate == null) != (endDate == null)) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        return ResponseEntity.ok(attendanceService.getStudentAttendanceSummary());
     }
 
     // =================== FACULTY ======================

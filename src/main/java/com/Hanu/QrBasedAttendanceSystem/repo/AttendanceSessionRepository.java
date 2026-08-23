@@ -20,4 +20,8 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     List<AttendanceSession> findByStatusAndEndTimeLessThanEqual(SessionStatus status, LocalDateTime time);
 
     boolean existsByFacultyAndDate(Faculty faculty, LocalDate now);
+
+    long countByFaculty(Faculty faculty);
+
+    long countByFacultyAndDateBetween(Faculty faculty, LocalDate startDate, LocalDate endDate);
 }
