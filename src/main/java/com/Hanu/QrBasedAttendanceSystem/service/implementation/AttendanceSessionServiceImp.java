@@ -1,12 +1,12 @@
 package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 
+import com.Hanu.QrBasedAttendanceSystem.Exception.BadInputException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceAlreadyExistException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceReportResponse;
 import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceSessionResponse;
-import com.Hanu.QrBasedAttendanceSystem.entity.AttendanceSession;
-import com.Hanu.QrBasedAttendanceSystem.entity.Faculty;
-import com.Hanu.QrBasedAttendanceSystem.entity.User;
+import com.Hanu.QrBasedAttendanceSystem.entity.*;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.SessionStatus;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,69 +35,178 @@ public class AttendanceSessionServiceImp implements AttendanceSessionService {
     @Transactional
     public AttendanceSessionResponse createSession() {
 
-        User user = getUser();
+        Faculty faculty = getAuthenticatedFaculty();
 
-        if(user.getRole() != Role.FACULTY) {
-            throw new BadCredentialsException("Role must be faculty");
+        if (faculty.getStatus() == Status.INACTIVE) {
+            throw new ResourceNotAvailableException("Faculty not available");
+        }
+
+        if (hasActiveSession(faculty)) {
+            throw new ResourceAlreadyExistException(
+                    "Session already created by this faculty"
+            );
+        }
+
+        if (attendanceSessionRepository.existsByFacultyAndDate(
+                faculty,
+                LocalDate.now()
+        )) {
+            throw new ResourceAlreadyExistException(
+                    "Today's session already created"
+            );
+        }
+
+        AttendanceSession session = buildSession(faculty);
+
+        return mapToResponse(
+                attendanceSessionRepository.save(session)
+        );
+    }
+
+    @Override
+    public AttendanceSessionResponse getActiveSession() {
+
+        Faculty faculty = getAuthenticatedFaculty();
+
+        AttendanceSession session = attendanceSessionRepository
+                .findByFacultyAndStatus(faculty, SessionStatus.ACTIVE)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Active attendance session is not available"
+                        )
+                );
+
+        return mapToResponse(session);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceSessionResponse closeSession(Long id) {
+
+        Faculty faculty = getAuthenticatedFaculty();
+
+        AttendanceSession session = attendanceSessionRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Session not found")
+                );
+
+        validateSessionOwnership(faculty, session);
+
+        if (session.getStatus() == SessionStatus.CLOSED) {
+            throw new BadInputException("Session is already closed");
+        }
+
+        session.setStatus(SessionStatus.CLOSED);
+
+        return mapToResponse(session);
+    }
+
+    @Override
+    public List<AttendanceSessionResponse> getAllSession() {
+
+        Faculty faculty = getAuthenticatedFaculty();
+
+        List<AttendanceSession> sessions = attendanceSessionRepository.findByFaculty(faculty);
+
+        return mapToResponses(sessions);
+    }
+
+    // =========================
+    // AUTHENTICATION
+    // =========================
+
+    private Faculty getAuthenticatedFaculty() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+            throw new BadCredentialsException("User not authenticated");
+        }
+
+        User user = (User) authentication.getPrincipal();
+
+        if (user.getRole() != Role.FACULTY) {
+            throw new BadCredentialsException(
+                    "Only faculty can perform this operation"
+            );
         }
 
         Faculty faculty = user.getFaculty();
 
-        if(faculty == null) {
-            throw new ResourceNotFoundException("Faculty Not found");
+        if (faculty == null) {
+            throw new ResourceNotFoundException("Faculty not found");
         }
 
-        if(faculty.getStatus() == Status.INACTIVE) {
-            throw new ResourceNotAvailableException("Faculty Not available");
-        }
-
-        if(attendanceSessionRepository.findByFacultyAndStatus(faculty, SessionStatus.ACTIVE).isPresent()) {
-            throw new ResourceAlreadyExistException("Session already created by this faculty");
-        }
-
-        if(attendanceSessionRepository.existsByFacultyAndDate(faculty, LocalDate.now())) {
-            throw new ResourceAlreadyExistException("Today's Session already created");
-        }
-
-        AttendanceSession attendanceSession = mapToAttendanceSession(faculty);
-
-        attendanceSession = attendanceSessionRepository.save(attendanceSession);
-
-        return mapToAttendanceSessionResponse(attendanceSession);
+        return faculty;
     }
 
+    // =========================
+    // VALIDATION
+    // =========================
 
-    // ===================== HELPER METHODS =====================
-
-    private User getUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if(authentication == null) {
-            throw new BadCredentialsException("user not authenticated");
-        }
-
-        return (User) authentication.getPrincipal();
+    private boolean hasActiveSession(Faculty faculty) {
+        return attendanceSessionRepository
+                .findByFacultyAndStatus(faculty, SessionStatus.ACTIVE)
+                .isPresent();
     }
 
-    private AttendanceSession mapToAttendanceSession(Faculty faculty) {
+    private void validateSessionOwnership(
+            Faculty faculty,
+            AttendanceSession session
+    ) {
+
+        if (!Objects.equals(
+                faculty.getId(),
+                session.getFaculty().getId()
+        )) {
+            throw new BadCredentialsException(
+                    "Faculty does not own this session"
+            );
+        }
+    }
+
+    // =========================
+    // MAPPING
+    // =========================
+
+    private AttendanceSession buildSession(Faculty faculty) {
+
         LocalDateTime startTime = LocalDateTime.now();
+
         return AttendanceSession.builder()
                 .faculty(faculty)
-                .date(LocalDate.now())
+                .date(startTime.toLocalDate())
                 .startTime(startTime)
                 .endTime(startTime.plusHours(2))
                 .status(SessionStatus.ACTIVE)
                 .build();
     }
 
-    private AttendanceSessionResponse mapToAttendanceSessionResponse(AttendanceSession attendanceSession) {
+    private AttendanceSessionResponse mapToResponse(
+            AttendanceSession session
+    ) {
+
         return AttendanceSessionResponse.builder()
-                .id(attendanceSession.getId())
-                .facultyId(attendanceSession.getFaculty().getFacultyId())
-                .date(attendanceSession.getDate())
-                .startTime(attendanceSession.getStartTime())
-                .endTime(attendanceSession.getEndTime())
-                .status(attendanceSession.getStatus())
+                .id(session.getId())
+                .facultyId(session.getFaculty().getFacultyId())
+                .date(session.getDate())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .status(session.getStatus())
                 .build();
+    }
+
+    private List<AttendanceSessionResponse> mapToResponses(List<AttendanceSession> sessions) {
+
+        List<AttendanceSessionResponse> responses = new ArrayList<>();
+
+        for(AttendanceSession session : sessions) {
+            responses.add(mapToResponse(session));
+        }
+
+        return responses;
     }
 }

@@ -2,8 +2,11 @@ package com.Hanu.QrBasedAttendanceSystem.service;
 
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.FacultyAttendanceSummary;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
+import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceReportResponse;
 import org.jspecify.annotations.Nullable;
+import org.springframework.cglib.core.Local;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,4 +35,11 @@ public interface AttendanceService {
     StudentAttendanceSummary getStudentAttendanceSummary();
 
     StudentAttendanceSummary getStudentAttendanceSummary(LocalDate startDate, LocalDate endDate);
+
+    FacultyAttendanceSummary getFacultyAttendanceSummary();
+
+    FacultyAttendanceSummary getFacultyAttendanceSummary(LocalDate startDate, LocalDate endDate);
+
+    AttendanceReportResponse getSessionAttendances(Long sessionId);
+
 }

@@ -3,7 +3,10 @@ package com.Hanu.QrBasedAttendanceSystem.service.implementation;
 import com.Hanu.QrBasedAttendanceSystem.Exception.*;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.AttendanceReportProjection;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.FacultyAttendanceSummary;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
+import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceReportResponse;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
@@ -22,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 @Service
@@ -168,32 +172,7 @@ public class AttendanceServiceImp implements AttendanceService {
             throw new BadCredentialsException("Role must be student");
         }
 
-        Faculty faculty = student.getFaculty();
-
-        if(faculty == null) {
-            throw  new ResourceNotFoundException("Faculty Not found");
-        }
-
-        long totalSessions = attendanceSessionRepository.countByFaculty(faculty);
-
-        long presentSession = attendanceRepository.countByStudentAndStatus(student, AttendStatus.PRESENT);
-
-        long absentSession = totalSessions - presentSession;
-
-        long attendancePercentage = 0;
-
-        if(totalSessions != 0) {
-            attendancePercentage = (presentSession / totalSessions) * 100;
-        }
-
-        return StudentAttendanceSummary.builder()
-                .name(user.getName())
-                .roll(student.getRoll())
-                .totalSessions(totalSessions)
-                .presentSessions(presentSession)
-                .absentSessions(absentSession)
-                .attendancePercentage(attendancePercentage)
-                .build();
+        return getStudentAttendanceSummaryHelper(user, student);
     }
 
     @Override
@@ -209,32 +188,7 @@ public class AttendanceServiceImp implements AttendanceService {
             throw new BadCredentialsException("Role must be student");
         }
 
-        Faculty faculty = student.getFaculty();
-
-        if(faculty == null) {
-            throw  new ResourceNotFoundException("Faculty Not found");
-        }
-
-        long totalSessions = attendanceSessionRepository.countByFacultyAndDateBetween(faculty, startDate, endDate);
-
-        long presentSession = attendanceRepository.countByStudentAndStatusAndDateBetween(student, AttendStatus.PRESENT, startDate, endDate);
-
-        long absentSession = totalSessions - presentSession;
-
-        double attendancePercentage = 0;
-
-        if(totalSessions != 0) {
-            attendancePercentage = (presentSession / totalSessions) * 100;
-        }
-
-        return StudentAttendanceSummary.builder()
-                .name(user.getName())
-                .roll(student.getRoll())
-                .totalSessions(totalSessions)
-                .presentSessions(presentSession)
-                .absentSessions(absentSession)
-                .attendancePercentage(attendancePercentage)
-                .build();
+        return getStudentAttendanceSummaryHelper(user, student, startDate, endDate);
     }
 
     // ================= FACULTY =================
@@ -353,7 +307,146 @@ public class AttendanceServiceImp implements AttendanceService {
         return mapToAttendanceResponses(attendances);
     }
 
+    @Override
+    @Transactional
+    public FacultyAttendanceSummary getFacultyAttendanceSummary() {
+
+        User user = getUser();
+
+        Faculty faculty = facultyRepository.findFacultyWithStudents(user.getFaculty().getId()).orElseThrow(() -> new ResourceNotFoundException("Faculty Not found"));
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFaculty(faculty);
+
+        long totalAttendanceRecords = attendanceRepository.countByFaculty(faculty);
+
+        List<Student> students = faculty.getStudents();
+
+        List<StudentAttendanceSummary> summaries = new ArrayList<>();
+
+        for(Student student : students) {
+            summaries.add(getStudentAttendanceSummaryHelper(user, student));
+        }
+
+        return FacultyAttendanceSummary.builder()
+                .facultyId(faculty.getFacultyId())
+                .facultyName(user.getName())
+                .totalSessions(totalSessions)
+                .totalAttendanceRecords(totalAttendanceRecords)
+                .studentAttendanceSummaries(summaries)
+                .build();
+    }
+
+    @Transactional
+    public FacultyAttendanceSummary getFacultyAttendanceSummary(LocalDate startDate, LocalDate endDate) {
+
+        validateDates(startDate, endDate);
+
+        User user = getUser();
+
+        Faculty faculty = facultyRepository.findFacultyWithStudents(user.getFaculty().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Faculty Not found")); 
+
+        if(faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFacultyAndDateBetween(faculty, startDate, endDate);
+
+        long totalAttendanceRecords = attendanceRepository.countByFacultyAndDateBetween(faculty, startDate, endDate);
+
+        List<Student> students = faculty.getStudents();
+
+        List<StudentAttendanceSummary> summaries = new ArrayList<>();
+
+        for(Student student : students) {
+            summaries.add(getStudentAttendanceSummaryHelper(user, student, startDate, endDate));
+        }
+
+        return FacultyAttendanceSummary.builder()
+                .facultyId(faculty.getFacultyId())
+                .facultyName(user.getName())
+                .totalSessions(totalSessions)
+                .totalAttendanceRecords(totalAttendanceRecords)
+                .studentAttendanceSummaries(summaries)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public AttendanceReportResponse getSessionAttendances(Long sessionId) {
+
+        User user = getUser();
+
+        Faculty faculty = user.getFaculty();
+
+        if (faculty == null) {
+            throw new BadCredentialsException("Role must be faculty");
+        }
+
+        AttendanceSession session = attendanceSessionRepository
+                .findById(sessionId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Session not found")
+                );
+
+        validateSessionOwnership(faculty, session);
+
+        List<AttendanceReportProjection> records =
+                attendanceRepository.findSessionAttendanceReport(
+                        faculty,
+                        session
+                );
+
+        List<AttendanceResponse> responses = records.stream()
+                .map(record -> AttendanceResponse.builder()
+                        .id(record.getAttendanceId())
+                        .studentName(record.getStudentName())
+                        .studentRoll(record.getStudentRoll())
+                        .facultyId(faculty.getFacultyId())
+                        .attendanceDate(session.getDate())
+                        .attendanceTime(record.getAttendanceTime())
+                        .status(
+                                record.getAttendanceId() == null
+                                        ? AttendStatus.ABSENT
+                                        : record.getStatus()
+                        )
+                        .sessionId(session.getId())
+                        .build()
+                )
+                .toList();
+
+        return AttendanceReportResponse.builder()
+                .sessionId(session.getId())
+                .facultyId(faculty.getFacultyId())
+                .date(session.getDate())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .status(session.getStatus())
+                .attendances(responses)
+                .build();
+    }
+
+
     // ======================= Helper function ======================
+
+    private void validateSessionOwnership(
+            Faculty faculty,
+            AttendanceSession session
+    ) {
+
+        if (!Objects.equals(
+                faculty.getId(),
+                session.getFaculty().getId()
+        )) {
+            throw new BadCredentialsException(
+                    "Faculty does not own this session"
+            );
+        }
+    }
 
     private static User getUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -374,6 +467,7 @@ public class AttendanceServiceImp implements AttendanceService {
                 .attendanceTime(attendance.getTime())
                 .attendanceDate(attendance.getDate())
                 .status(attendance.getStatus())
+                .sessionId(attendance.getSession().getId())
                 .build();
     }
 
@@ -403,5 +497,61 @@ public class AttendanceServiceImp implements AttendanceService {
         }
     }
 
+    private StudentAttendanceSummary getStudentAttendanceSummaryHelper(User user, Student student) {
+        Faculty faculty = student.getFaculty();
 
+        if(faculty == null) {
+            throw  new ResourceNotFoundException("Faculty Not found");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFaculty(faculty);
+
+        long presentSession = attendanceRepository.countByStudentAndStatus(student, AttendStatus.PRESENT);
+
+        long absentSession = totalSessions - presentSession;
+
+        double attendancePercentage = 0;
+
+        if(totalSessions != 0) {
+            attendancePercentage = ((double) presentSession / totalSessions) * 100;
+        }
+
+        return StudentAttendanceSummary.builder()
+                .name(user.getName())
+                .roll(student.getRoll())
+                .totalSessions(totalSessions)
+                .presentSessions(presentSession)
+                .absentSessions(absentSession)
+                .attendancePercentage(attendancePercentage)
+                .build();
+    }
+
+    private StudentAttendanceSummary getStudentAttendanceSummaryHelper(User user, Student student, LocalDate startDate, LocalDate endDate){
+        Faculty faculty = student.getFaculty();
+
+        if(faculty == null) {
+            throw  new ResourceNotFoundException("Faculty Not found");
+        }
+
+        long totalSessions = attendanceSessionRepository.countByFacultyAndDateBetween(faculty, startDate, endDate);
+
+        long presentSession = attendanceRepository.countByStudentAndStatusAndDateBetween(student, AttendStatus.PRESENT, startDate, endDate);
+
+        long absentSession = totalSessions - presentSession;
+
+        double attendancePercentage = 0.0;
+
+        if(totalSessions != 0) {
+            attendancePercentage = ((double) presentSession / totalSessions) * 100;
+        }
+
+        return StudentAttendanceSummary.builder()
+                .name(student.getUser().getName())
+                .roll(student.getRoll())
+                .totalSessions(totalSessions)
+                .presentSessions(presentSession)
+                .absentSessions(absentSession)
+                .attendancePercentage(attendancePercentage)
+                .build();
+    }
 }

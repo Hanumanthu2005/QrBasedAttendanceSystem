@@ -27,4 +27,6 @@ public class AttendanceResponse {
     private LocalDateTime attendanceTime;
 
     private AttendStatus status;
+
+    private Long sessionId;
 }

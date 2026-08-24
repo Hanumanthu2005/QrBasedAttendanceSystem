@@ -2,7 +2,9 @@ package com.Hanu.QrBasedAttendanceSystem.controller;
 
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceRequest;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.FacultyAttendanceSummary;
 import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.StudentAttendanceSummary;
+import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceReportResponse;
 import com.Hanu.QrBasedAttendanceSystem.service.AttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -140,5 +142,29 @@ public class AttendanceController {
             return ResponseEntity.badRequest().body(List.of());
         }
         return ResponseEntity.ok().body(attendanceService.getFacultyAttendance());
+    }
+
+    @GetMapping("/faculty/attendance/summary")
+    public ResponseEntity<FacultyAttendanceSummary> getFacultyAttendanceSummary(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate ) {
+        if(startDate != null && endDate != null) {
+            return ResponseEntity.ok(attendanceService.getFacultyAttendanceSummary(startDate, endDate));
+        }
+
+        if((startDate == null) != (endDate == null)) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        return ResponseEntity.ok(attendanceService.getFacultyAttendanceSummary());
+    }
+
+    @GetMapping("/faculty/session/{sessionId}/attendance")
+    public ResponseEntity<AttendanceReportResponse> getSessionAttendance(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(attendanceService.getSessionAttendances(sessionId));
     }
 }
