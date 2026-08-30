@@ -26,4 +26,9 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     long countByFacultyAndDateBetween(Faculty faculty, LocalDate startDate, LocalDate endDate);
 
     List<AttendanceSession> findByFaculty(Faculty faculty);
+
+    List<AttendanceSession> findByDateBetween(
+            LocalDate startDate,
+            LocalDate endDate
+    );
 }

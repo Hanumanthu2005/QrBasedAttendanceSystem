@@ -4,12 +4,16 @@ import com.Hanu.QrBasedAttendanceSystem.Exception.BadInputException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceAlreadyExistException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotAvailableException;
 import com.Hanu.QrBasedAttendanceSystem.Exception.ResourceNotFoundException;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendance.AttendanceResponse;
+import com.Hanu.QrBasedAttendanceSystem.dto.attendanceReports.AttendanceReportProjection;
 import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceReportResponse;
 import com.Hanu.QrBasedAttendanceSystem.dto.session.AttendanceSessionResponse;
 import com.Hanu.QrBasedAttendanceSystem.entity.*;
+import com.Hanu.QrBasedAttendanceSystem.entity.utils.AttendStatus;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Role;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.SessionStatus;
 import com.Hanu.QrBasedAttendanceSystem.entity.utils.Status;
+import com.Hanu.QrBasedAttendanceSystem.repo.AttendanceRepository;
 import com.Hanu.QrBasedAttendanceSystem.repo.AttendanceSessionRepository;
 import com.Hanu.QrBasedAttendanceSystem.service.AttendanceSessionService;
 import jakarta.transaction.Transactional;
@@ -30,6 +34,96 @@ import java.util.Objects;
 public class AttendanceSessionServiceImp implements AttendanceSessionService {
 
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final AttendanceRepository attendanceRepository;
+
+    //=========================
+    // ADMIN
+    //=========================
+
+    @Override
+    @Transactional
+    public AttendanceReportResponse getAdminSessionAttendance(Long sessionId) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null) {
+            throw new BadCredentialsException("User must be authenticated");
+        }
+
+        User user = (User) authentication.getPrincipal();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        if (user.getRole() != Role.ADMIN) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        if (sessionId == null || sessionId <= 0) {
+            throw new BadInputException("Invalid session id");
+        }
+
+        AttendanceSession session =
+                attendanceSessionRepository.findById(sessionId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Session not found with id " + sessionId
+                                )
+                        );
+
+        Faculty faculty = getAuthenticatedFaculty();
+
+        List<AttendanceReportProjection> records =
+                attendanceRepository.findSessionAttendanceReport(
+                        faculty,
+                        session
+                );
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for (AttendanceReportProjection record : records) {
+
+            AttendStatus status;
+
+            if (record.getAttendanceId() == null) {
+                status = AttendStatus.ABSENT;
+            } else {
+                status = record.getStatus();
+            }
+
+            AttendanceResponse response = AttendanceResponse.builder()
+                    .id(record.getAttendanceId())
+                    .studentName(record.getStudentName())
+                    .studentRoll(record.getStudentRoll())
+                    .facultyId(faculty.getFacultyId())
+                    .attendanceDate(
+                            record.getAttendanceId() == null
+                                    ? null
+                                    : session.getDate()
+                    )
+                    .attendanceTime(record.getAttendanceTime())
+                    .status(status)
+                    .build();
+
+            responses.add(response);
+        }
+
+        return AttendanceReportResponse.builder()
+                .sessionId(session.getId())
+                .facultyId(faculty.getFacultyId())
+                .date(session.getDate())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .status(session.getStatus())
+                .attendances(responses)
+                .build();
+    }
+
+
+    //=========================
+    // FACULTY
+    //=========================
 
     @Override
     @Transactional
@@ -142,6 +236,8 @@ public class AttendanceSessionServiceImp implements AttendanceSessionService {
 
         return faculty;
     }
+
+
 
     // =========================
     // VALIDATION

@@ -16,4 +16,6 @@ public interface AttendanceSessionService {
     AttendanceSessionResponse closeSession(Long id);
 
     List<AttendanceSessionResponse> getAllSession();
+
+    AttendanceReportResponse getAdminSessionAttendance(Long sessionId);
 }

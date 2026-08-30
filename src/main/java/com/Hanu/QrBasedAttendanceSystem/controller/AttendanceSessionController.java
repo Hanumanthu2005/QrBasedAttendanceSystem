@@ -38,4 +38,21 @@ public class AttendanceSessionController {
     public ResponseEntity<List<AttendanceSessionResponse>> getAllSessions() {
         return ResponseEntity.ok(attendanceSessionService.getAllSession());
     }
+
+    @GetMapping("/admin/sessions")
+    public ResponseEntity<List<AttendanceSessionResponse>> getAdminSessions() {
+        return ResponseEntity.ok(
+                attendanceSessionService.getAllSession()
+        );
+    }
+
+    @GetMapping("/admin/session/{sessionId}/attendance")
+    public ResponseEntity<AttendanceReportResponse> getAdminSessionAttendance(
+            @PathVariable Long sessionId
+    ) {
+
+        return ResponseEntity.ok(
+                attendanceSessionService.getAdminSessionAttendance(sessionId)
+        );
+    }
 }
