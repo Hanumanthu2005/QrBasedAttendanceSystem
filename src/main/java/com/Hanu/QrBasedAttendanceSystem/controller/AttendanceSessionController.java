@@ -36,7 +36,17 @@ public class AttendanceSessionController {
 
     @GetMapping("/faculty/sessions")
     public ResponseEntity<List<AttendanceSessionResponse>> getAllSessions() {
-        return ResponseEntity.ok(attendanceSessionService.getAllSession());
+        return ResponseEntity.ok(attendanceSessionService.getFacultySession());
+    }
+
+    @GetMapping("/faculty/session/{sessionId}/attendance")
+    public ResponseEntity<AttendanceReportResponse> getFacultySessionAttendance(
+            @PathVariable Long sessionId
+    ) {
+
+        return ResponseEntity.ok(
+                attendanceSessionService.getFacultySessionAttendance(sessionId)
+        );
     }
 
     @GetMapping("/admin/sessions")

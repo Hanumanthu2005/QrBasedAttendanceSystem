@@ -40,6 +40,4 @@ public interface AttendanceService {
 
     FacultyAttendanceSummary getFacultyAttendanceSummary(LocalDate startDate, LocalDate endDate);
 
-    AttendanceReportResponse getSessionAttendances(Long sessionId);
-
 }

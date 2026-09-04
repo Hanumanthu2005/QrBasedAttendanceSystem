@@ -163,8 +163,4 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getFacultyAttendanceSummary());
     }
 
-    @GetMapping("/faculty/session/{sessionId}/attendance")
-    public ResponseEntity<AttendanceReportResponse> getSessionAttendance(@PathVariable Long sessionId) {
-        return ResponseEntity.ok(attendanceService.getSessionAttendances(sessionId));
-    }
 }

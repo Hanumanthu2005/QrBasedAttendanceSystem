@@ -121,6 +121,41 @@ public class AttendanceSessionServiceImp implements AttendanceSessionService {
     }
 
 
+    @Override
+    public List<AttendanceSessionResponse> getAllSession() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+
+            throw new BadCredentialsException(
+                    "User not authenticated"
+            );
+        }
+
+        User user = (User) authentication.getPrincipal();
+
+        if (user == null) {
+            throw new ResourceNotFoundException(
+                    "User not found"
+            );
+        }
+
+        if (user.getRole() != Role.ADMIN) {
+            throw new BadCredentialsException(
+                    "Only admin can perform this operation"
+            );
+        }
+
+        List<AttendanceSession> sessions =
+                attendanceSessionRepository.findAll();
+
+        return mapToResponses(sessions);
+    }
+
+
     //=========================
     // FACULTY
     //=========================
@@ -197,13 +232,97 @@ public class AttendanceSessionServiceImp implements AttendanceSessionService {
     }
 
     @Override
-    public List<AttendanceSessionResponse> getAllSession() {
+    public List<AttendanceSessionResponse> getFacultySession() {
 
         Faculty faculty = getAuthenticatedFaculty();
 
         List<AttendanceSession> sessions = attendanceSessionRepository.findByFaculty(faculty);
 
         return mapToResponses(sessions);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceReportResponse getFacultySessionAttendance(Long sessionId) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null) {
+            throw new BadCredentialsException("User must be authenticated");
+        }
+
+        User user = (User) authentication.getPrincipal();
+
+        if(user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        if (user.getRole() != Role.FACULTY) {
+            throw new BadCredentialsException("Role must be admin");
+        }
+
+        if (sessionId == null || sessionId <= 0) {
+            throw new BadInputException("Invalid session id");
+        }
+
+        AttendanceSession session =
+                attendanceSessionRepository.findById(sessionId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Session not found with id " + sessionId
+                                )
+                        );
+
+        Faculty faculty = user.getFaculty();
+
+        if(faculty == null) {
+            throw new ResourceNotFoundException("Faculty Not found");
+        }
+
+        List<AttendanceReportProjection> records =
+                attendanceRepository.findSessionAttendanceReport(
+                        faculty,
+                        session
+                );
+
+        List<AttendanceResponse> responses = new ArrayList<>();
+
+        for (AttendanceReportProjection record : records) {
+
+            AttendStatus status;
+
+            if (record.getAttendanceId() == null) {
+                status = AttendStatus.ABSENT;
+            } else {
+                status = record.getStatus();
+            }
+
+            AttendanceResponse response = AttendanceResponse.builder()
+                    .id(record.getAttendanceId())
+                    .studentName(record.getStudentName())
+                    .studentRoll(record.getStudentRoll())
+                    .facultyId(faculty.getFacultyId())
+                    .attendanceDate(
+                            record.getAttendanceId() == null
+                                    ? null
+                                    : session.getDate()
+                    )
+                    .attendanceTime(record.getAttendanceTime())
+                    .status(status)
+                    .build();
+
+            responses.add(response);
+        }
+
+        return AttendanceReportResponse.builder()
+                .sessionId(session.getId())
+                .facultyId(faculty.getFacultyId())
+                .date(session.getDate())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .status(session.getStatus())
+                .attendances(responses)
+                .build();
     }
 
     // =========================
@@ -222,6 +341,7 @@ public class AttendanceSessionServiceImp implements AttendanceSessionService {
 
         User user = (User) authentication.getPrincipal();
 
+        assert user != null;
         if (user.getRole() != Role.FACULTY) {
             throw new BadCredentialsException(
                     "Only faculty can perform this operation"

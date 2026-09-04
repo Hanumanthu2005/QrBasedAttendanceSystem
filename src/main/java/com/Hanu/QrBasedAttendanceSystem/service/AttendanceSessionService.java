@@ -15,7 +15,11 @@ public interface AttendanceSessionService {
 
     AttendanceSessionResponse closeSession(Long id);
 
+    List<AttendanceSessionResponse> getFacultySession();
+
     List<AttendanceSessionResponse> getAllSession();
+
+    AttendanceReportResponse getFacultySessionAttendance(Long sessionId);
 
     AttendanceReportResponse getAdminSessionAttendance(Long sessionId);
 }

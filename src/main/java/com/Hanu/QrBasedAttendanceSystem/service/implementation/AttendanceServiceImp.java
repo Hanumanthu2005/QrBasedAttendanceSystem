@@ -375,61 +375,6 @@ public class AttendanceServiceImp implements AttendanceService {
                 .build();
     }
 
-    @Override
-    @Transactional
-    public AttendanceReportResponse getSessionAttendances(Long sessionId) {
-
-        User user = getUser();
-
-        Faculty faculty = user.getFaculty();
-
-        if (faculty == null) {
-            throw new BadCredentialsException("Role must be faculty");
-        }
-
-        AttendanceSession session = attendanceSessionRepository
-                .findById(sessionId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Session not found")
-                );
-
-        validateSessionOwnership(faculty, session);
-
-        List<AttendanceReportProjection> records =
-                attendanceRepository.findSessionAttendanceReport(
-                        faculty,
-                        session
-                );
-
-        List<AttendanceResponse> responses = records.stream()
-                .map(record -> AttendanceResponse.builder()
-                        .id(record.getAttendanceId())
-                        .studentName(record.getStudentName())
-                        .studentRoll(record.getStudentRoll())
-                        .facultyId(faculty.getFacultyId())
-                        .attendanceDate(session.getDate())
-                        .attendanceTime(record.getAttendanceTime())
-                        .status(
-                                record.getAttendanceId() == null
-                                        ? AttendStatus.ABSENT
-                                        : record.getStatus()
-                        )
-                        .sessionId(session.getId())
-                        .build()
-                )
-                .toList();
-
-        return AttendanceReportResponse.builder()
-                .sessionId(session.getId())
-                .facultyId(faculty.getFacultyId())
-                .date(session.getDate())
-                .startTime(session.getStartTime())
-                .endTime(session.getEndTime())
-                .status(session.getStatus())
-                .attendances(responses)
-                .build();
-    }
-
 
     // ======================= Helper function ======================
 
