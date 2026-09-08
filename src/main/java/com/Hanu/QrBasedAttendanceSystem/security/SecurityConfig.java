@@ -83,7 +83,8 @@ public class SecurityConfig {
 
         // React frontend
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
+                List.of("http://localhost:5173",
+                        "https://qrbasedattendancesystem.netlify.app")
         );
 
         // HTTP methods
